@@ -9,7 +9,9 @@ def cell_is_empty(cell_value):
     არგუმენტები:
         1. cell_value - xlsx ფაილში უჯრის მნიშვნელობა
     '''
-    return str(cell_value).strip() in ['None', 'NONE', "", None]
+    if cell_value is None or not str(cell_value).strip():
+        return True
+    return False
 
 
 def get_sheet_names(file, return_wb=False):
@@ -98,10 +100,20 @@ def get_data(
             data_columns,
             sheet_index=0,
             data_only=False,
-            number=10):
+            number=10,
+            unpack_if_one=True,
+            drop_empties=False):
     '''
         ფუნქცია გვეხმარება ჩვენთვის სასურველი სვეტების მონაცემების
     მიღებაში Excel-ის(xlsx) ფაილებიდან.
+
+    #
+        უცნაური მიზეზის გამო, თუ ფაილში ცვლილება ახლა შეგვაქვს
+    და გვინდა განახლებული ფაილიდან ინფორმაციის მიღება, სასურველია
+    ჯერ დავხუროთ Calc-ი, რადგან ზოგჯერ, სანამ პროგრამა
+    გახსნილია, ფაილში ცვლილებები არ ჩანს Python-ისთვის.
+        Excel-ის შემთხვევა ჯერ არ არის დატესტილი.
+    #
 
         ჩვენ ვუთითებთ საწყის სტრიქონს და სვეტებს, რომლებიდანაც
     გვინდა მონაცემების მიღება.
@@ -137,6 +149,15 @@ def get_data(
 
         7. number  -  (ნაგულისხმევად = 10), რამდენი ქვედა ცარიელი უჯრა
                     ჩავთვალოთ საკმარისად, რათა უჯრა ბოლოდ მივიჩნიოთ
+
+        8. unpack_if_one - (ნაგულისხმევად=True), თუ True-ა, როცა სვეტების
+                        რაოდენობა, საიდანაც ვიღებთ მონაცემებს მხოლოდ ერთია,
+                        შედეგი არის არა სიების სია, არამედ ერთი სია მხოლოდ
+                        ამ სვეტის მნიშვნელობებით.
+
+        9. drop_empties: - (ნაგულისხმევად=False), თუ True-ა, შედეგებში მივიღებთ
+                        მხოლოდ არაცარიელ უჯრებს
+                        (ცარიელად ითვლება მხოლოდ ცარიელი სივრცეც)
     '''
     import openpyxl
     # load excel data if workbook object is not directly used
@@ -162,7 +183,16 @@ def get_data(
         row_records = []
 
         for column in data_columns:
-            row_records.append(str(ws[f'{column}{row}'].value))
+            row_records.append(ws[f'{column}{row}'].value)
+
+        # remove empties if we wanted
+        if drop_empties:
+            if not any([not cell_is_empty(i) for i in row_records]):
+                continue
         result_list.append(row_records)
+
+    # unpack if needed
+    if len(data_columns) == 1 and unpack_if_one:
+        result_list = [i[0] for i in result_list]
 
     return result_list
