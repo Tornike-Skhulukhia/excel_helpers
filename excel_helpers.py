@@ -196,3 +196,154 @@ def get_data(
         result_list = [i[0] for i in result_list]
 
     return result_list
+
+def get_workbook_obj(xlsx_file):
+    '''
+    აბრუნებს openpyxl-ის workbook ობიექტს.
+    შეცდომებზე შემოწმება არ ხდება.
+
+    არგუმენტები:
+        1. xlsx_file - xlsx ფაილის სახელი/მისამართი
+    '''
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx_file)
+
+    return wb
+
+
+def get_all_excel_column_letters():
+    '''
+    აბრუნებს xlsx ფაილის ყველა შესაძლო სვეტის ასოთა კომბინაციას
+    '''
+    import string
+
+    uppers = string.ascii_uppercase
+    # add 1 letters
+    letters = list(uppers)
+    # add 2 letters
+    letters.extend([i + j for i in uppers for j in uppers])
+    # add 3 letters
+    letters.extend([i + j + k for i in uppers for j in uppers for k in uppers])
+
+    return letters[:2**14]
+
+
+def save_data(data,
+              filename="New File.xlsx",
+              sheet="Sheet 1",
+              columns=None,
+              start_row=1,
+              bold_headers=True,
+              center_data=True,
+              ):
+    '''
+    # უკეთ დასატესტია! #
+
+    ინახავს მონაცემებს xlsx ფაილში მითითებული სახელით,
+    თუ ფაილი არსებობს, ეს ფაილი შეიცვლება,
+    სხვა შემთხვევაში, იქმნება ახალი ფაილი.
+
+    არგუმენტები:
+        1. data - თუ ვწერთ ერთი სვეტის მონაცემებს list-ი,
+                რომელიც შეიცავს ელემენტებს,
+                    მაგ: [1, 2, 3, 4, 5]
+
+                თუ ვწერთ ერთზე მეტი სვეტის მონაცემებს,
+                list-ი, sublist-ებით, სადაც თითოეული sublist-ის ელემენტი
+                სწორი თანმიმდევრობით შეესაბამება სვეტების სახელებს, რომელსაც
+                მივუთითებთ columns არგუმენტში.
+                    მაგ: [
+                        [  header_1,     header_2,    header_3 ],
+                        [ row_1_col_1,  row_1_col_2, row_1_col_3]
+                        [ row_2_col_1,  row_2_col_2, row_2_col_3]
+                        [ row_3_col_1,  row_3_col_2, row_3_col_3]
+                    ]
+
+        2. filename - ფაილის სახელი/მისამართი.
+                    თუ ფაილი არსებობს, ცვლილებები შევა მასში, თუ
+                    არ არსებობს, შეიქმნება და შეინახება მითითებული სახელით
+
+        3. sheet - ფურცლის სახელი. თუ არ არსებობს, შეიქმნება
+                    (ნაგულისხმევად="Sheet 1").
+
+        4. columns - სვეტები, რომლებშიც გვინდა მონაცემთა შენახვა.
+                    თუ სვეტების სახელები მხოლოდ ერთ ასოიანია, შესაძლებელია
+                    ტექსტური ტიპის გამოყენება (მაგ: "ABC").
+
+                    სხვა შემთხვევაში, საჭიროა ეს მონაცემები იყოს სიაში.
+                    (მაგ: ["PY", "TH", "ON"])
+
+        5. start_row - რომელი სტრიქონიდან დაიწყოს მონაცემთა ჩაწერა
+                        (ნაგულისხმევად=1)
+
+        6. bold_headers - გავამუქოთ თუ არა headers(პირველი ელემენტი data-ში)
+                        (ნაგულისხმევად=True)
+
+        7. center_data - მოვათავსოთ თუ არა ყველა მონაცემი ცენტრში
+                        (ნაგულისხმევად=True)
+    '''
+
+    import os
+    import openpyxl
+    from openpyxl.styles import Font, Alignment
+
+    if not isinstance(data, list):
+        raise Exception(
+                f"Please use list for data argument, not {type(data)}")
+
+    xlsx_file = filename + ".xlsx"
+
+    # convert [1,2,3] to [[1], [2], [3]] to make things easier later
+    if not isinstance(data[0], list):
+        data = [[i] for i in data]
+
+    # get workbook
+    if os.path.isfile(xlsx_file):
+        wb = openpyxl.load_workbook(xlsx_file)
+        print("Already Created File loaded")
+    else:
+        # delete default sheet
+        wb = openpyxl.Workbook()
+        wb.remove(wb["Sheet"])
+
+    # get column names
+    if columns is not None:
+        assert isinstance(columns, (list, str))
+
+        if len(columns) != len(data[0]):
+            raise Exception("Number of columns in first row is "
+                            "not same as given columns as argument"
+                            f"({len(data[0])}!={len(columns)})")
+    else:
+        columns = get_all_excel_column_letters()[:len(data[0])]
+
+    # get worksheet
+    if sheet in wb.sheetnames:
+        ws = wb[sheet]
+    else:
+        ws = wb.create_sheet()
+        ws.title = sheet
+
+    # write data in file
+    for index, data_in_row in enumerate(data):
+        for data_in_cell, column in zip(data_in_row, columns):
+            ws[f'{column}{index + start_row}'].value = data_in_cell
+
+    # change header widths
+    for index, column in enumerate(columns):
+        ws.column_dimensions[column].width = \
+                                max(int(len(str(data[0][index]))*1.2) + 1, 5)
+
+    # make headers bold
+    if bold_headers:
+        for i in ws[f"{start_row}:{start_row}"]:
+            i.font = Font(bold=True)
+
+    # center rows if necessary
+    if center_data:
+        for index, data_in_row in enumerate(data):
+            for data_in_cell, column in zip(data_in_row, columns):
+                ws[f'{column}{index + start_row}'].alignment = \
+                                                Alignment(horizontal='center')
+
+    wb.save(xlsx_file)
