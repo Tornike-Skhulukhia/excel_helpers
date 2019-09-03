@@ -347,3 +347,26 @@ def save_data(data,
                                                 Alignment(horizontal='center')
 
     wb.save(xlsx_file)
+
+
+def xls_to_xlsx(xls_file_path):
+    '''
+       აკონვერტირებს xls ფაილს xlsx ფაილად და ინახავს
+       იმავე სახელით, ახალი გაფართოებით.
+
+       #! გამოყენებამდე აუცილებელია
+            pyexcel, pyexcel-xls და pyexcel-xlsxw ბიბლიოთეკების ინსტალაცია !#
+
+       არგუმენტები:
+            1. xls_file_path - xls ფაილის მისამართი
+    '''
+    # replace xls files with xlsx files
+    import pyexcel
+
+    if not xls_file_path.lower().endswith(".xls"):
+        raise Exception(
+                    "Please use xls file, not ",
+                    xls_file_path.split(".")[-1])
+
+    pyexcel.save_book_as(file_name=xls_file_path,
+                         dest_file_name=xls_file_path + "x")
