@@ -33,6 +33,51 @@ def get_sheet_names(file, return_wb=False):
     return wb.sheetnames if not return_wb else [wb.sheetnames, wb]
 
 
+def _get_one_row(worksheet_obj, columns_num=20, row_number=1,):
+    '''
+        აბრუნებს კონკრეტული სტრიქონის მონაცემებს, 1-ლი სვეტიდან
+        მითითებული რაოდენობით მარჯვნივ.
+
+        არგუმენტები:
+            1.worksheet_obj - openpyxl worksheet ობიექტი
+            2.columns_num - სვეტების რაოდენობა(ნაგულისხმევად=20)
+            3.row_number - სტრიქონის ნომერი(იწყება 1-დან)(ნაგულისხმევად=1)
+    '''
+    all_columns = get_all_excel_column_letters()
+    result = []
+
+    for i in range(columns_num):
+        result.append(
+            worksheet_obj[all_columns[i] + str(row_number)].value)
+
+    return result
+
+
+def _get_column_letter(worksheet_obj,
+                       text,
+                       row_number=1,
+                       check_columns_number=100):
+    '''
+    აბრუნებს სვეტის შესაბამის ასოს,
+    რომელშიც გვხვდება კონკრეტული ტექსტი.
+
+    არგუმენტები:
+        1.worksheet_obj - openpyxl worksheet ობიექტი
+        2.text - სათაური(ზუსტად), რომელსაც ვეძებთ
+        3.row_number - სტრიქონის ნომერი(იწყება 1-დან)(ნაგულისხმევად=1)
+        4.check_columns_number - რამდენი სვეტი შევამოწმოთ
+                            სათაურის საპოვნელად(სტანდარტულად=100)
+    '''
+    column_values = _get_one_row(worksheet_obj,
+                                 check_columns_number,
+                                 row_number)
+    result = None
+    if text in column_values:
+        result = get_all_excel_column_letters()[
+                            column_values.index(text)]
+    return result
+
+
 def get_last_row_num(file_or_wb_obj, sheet_name, column,
                      number=10, start_row=1):
     '''
